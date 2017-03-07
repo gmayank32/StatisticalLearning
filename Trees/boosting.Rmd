@@ -1,0 +1,54 @@
+---
+title: "R Notebook: Boosting"
+output: html_notebook
+---
+
+
+```{r}
+library(MASS)
+
+library(ISLR)
+
+library(gbm)
+```
+We run gbm() with the option distribution="gaussian" since this is a regression problem; if it were a binary classification problem, we would use distribution="bernoulli".
+
+```{r}
+set.seed(1)
+train = sample(1:nrow(Boston),nrow(Boston)/2)
+test = (-train)
+gbm.Boston = gbm(medv ~ ., data = Boston[train,], n.trees = 5000, interaction.depth = 4, distribution = "gaussian")
+```
+
+Summary produces relative influence statistics and plot
+```{r}
+summary(gbm.Boston)
+```
+
+We observed that lstat and rm are most important variable. We can also produce partial dependency plots of these two variables after integrating out the variables. These plots
+illustrate the marginal effect of the selected variables on the response after integrating out the other variables.
+
+```{r}
+par(mfrow = c(1,2) )
+plot(gbm.Boston, i = "lstat")
+plot(gbm.Boston, i = "rm")
+```
+
+It seems that median house price decreases with lstat and increases with rm.
+
+Using Boosted model to predict medv
+```{r}
+pred.Boost = predict(gbm.Boston, newdata = Boston[test, ], n.trees = 5000)
+mean((pred.Boost - Boston[test, 'medv'])^2)
+```
+
+
+Trying with different Shrinkage Factor, By default, it is 0.001
+```{r}
+boost.boston = gbm(medv~., data = Boston[train,], shrinkage = 0.2, n.trees = 5000, interaction.depth = 4, distribution = "gaussian", verbose = F)
+boost.pred = predict(boost.boston, newdata = Boston[test, ], n.trees = 5000)
+mean((boost.pred - Boston[test, 'medv'])^2)
+```
+
+It comes out to be better than shrinkage = 0.001
+Note : n.trees should be very large in order to compensate for small shrinkage
