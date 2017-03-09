@@ -1,0 +1,126 @@
+---
+title: "R Notebook: Support Vector Classifier(Linear Model)"
+output: html_notebook
+---
+
+**Support Vector Classifier**
+
+svm() from e1071 library is used for support vector machine. For support vector classifier we set kernel="linear". The cost argument is set to a value that determines the width of margin. If cost is assigned to a small value then the margin will be wide and many support vectors will be on the margin or violate the margin. If cost is large then the margin will be narrow and few support vectors will be on the margin or violate the margin.
+
+```{r}
+set.seed(1)
+x = matrix(rnorm(20*2), ncol = 2)
+y = c(rep(-1, 10), rep(1, 10))
+x[y==1,] = x[y==1,] + 1
+plot(x, col = 3-y)
+```
+
+Classes(y=1,y=-1) does not seem to be lineary separable.
+In order to perform SVM, we have to convert response variable to factor variable. Then, concatenate x and y as a data frame
+
+```{r}
+dat = data.frame(x=x, y = as.factor(y))
+dat
+```
+
+```{r}
+library(e1071)
+svm.fit = svm(y~., data = dat, cost = 10, kernel = "linear", scale =  FALSE)
+```
+
+Plotting obtained support classifier
+```{r}
+plot(svm.fit, dat)
+```
+
+We can observe that:
+1) -1 class is shown in green region.
+2) +1 class is shown in purple region.
+3) As we used kernel = "linear", the two regions is separated by linear boundary.
+4) x are support vectors.
+5) o are observations which are not support vectors.
+
+We can determine the identities of support vector using:
+```{r}
+svm.fit$index
+```
+
+Summary of svm.fit gives:
+```{r}
+summary(svm.fit)
+```
+
+Now using smaller value of cost:
+```{r}
+svm.fit2 = svm(y~., data = dat, cost = 0.1, kernel = "linear", scale =  FALSE)
+summary(svm.fit2)
+```
+Number of support vectors has now increased to 16; 8 in one class and 8 in other class.
+*Note: There is no way to know the coeffecients obtained when svm is fit and also width of the margin.*
+
+e1071 provides tune() which takes model as a parameter for which we want to find CV error for different tuning values like cost for svm. 
+It performs 10 folds cross validation for each tuning value.
+```{r}
+set.seed(1)
+tune.out = tune(svm, y~., data = dat, kernel = "linear", ranges = list(cost = c(0.001 , 0.01 , 0.1, 1 ,5 ,10 ,100)))
+```
+To print out cross validation errors for each of these model
+```{r}
+summary(tune.out)
+```
+
+We saw cost = 0.1 has lowest error. The tune() function stores the best model obtained. 
+
+```{r}
+best.mod = tune.out$best.model
+best.mod
+```
+
+Constructing our test dataset
+```{r}
+x.test = matrix(rnorm(20*2), ncol = 2)
+y.test = sample(c(-1,1), 20, rep = TRUE)
+x.test[y.test == 1,] = x.test[y.test == 1,]  + 1
+test.dat = data.frame(x=x.test, y=as.factor(y.test))
+```
+
+Using best.model
+```{r}
+svm.pred = predict(best.mod, test.dat)
+table(predict = svm.pred, test.y = y.test)
+```
+Using cost = 0.01
+```{r}
+svm.fit = svm(y~., data = dat, kernel = "linear", cost = 0.01, scale = FALSE)
+svm.pred = predict(svm.fit, test.dat)
+table(predict = svm.pred, test.y = y.test)
+```
+
+Only 1 extra misclassified observation.
+Consider a case where class are linearly seaparable. Creating linearly separable data.
+```{r}
+x[y==1,] = x[y==1] + 0.5
+plot(x, col = (y+5)/2, pch = 19)
+```
+
+Barely linearly separable. Fiting a support vector classifier with large value of cost
+```{r}
+dat = data.frame(x=x, y = as.factor(y))
+svm.fit = svm(y~., data = dat, kernel = "linear", cost = 1e+05, scale = TRUE)
+summary(svm.fit)
+```
+```{r}
+plot(svm.fit, dat)
+```
+Here margin is very narrow, as circles (observations other than support vectors are close to margin). It seems that this model will perform poorly on test data. 
+
+Reducing the cost value,
+```{r}
+svm.fit = svm(y~., data = dat, kernel = "linear", cost = 1, scale = FALSE)
+summary(svm.fit)
+```
+```{r}
+plot(svm.fit, dat)
+```
+
+Its margin is wider and use seven support vectors. It seems it will perform better than the model with cost = 1e+05
