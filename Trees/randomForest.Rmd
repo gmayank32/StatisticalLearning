@@ -1,0 +1,79 @@
+---
+title: "R Notebook: Random Forests"
+output: html_notebook
+---
+
+```{r}
+library(randomForest)
+library(MASS)
+library(ISLR)
+```
+
+Working with Boston data: Finding the dimensions of Boston data 
+```{r}
+dim(Boston)
+```
+
+Boston has 14 variables including Response variable
+```{r}
+head(Boston)
+```
+
+Creating training and test sample. But, first we need to set the seed to get correct random sample
+ 
+```{r}
+set.seed(1)
+train = sample(1:nrow(Boston),nrow(Boston)/2)
+test = (-train)
+```
+
+Now, we have to fit random forest model on train Boston data. First we start with Bagging. As Bagging is a special case of random forest in which m = no of variables in data therefore, we use random forest with mtry = 13 (all variables will be considered at each split in the tree) and importance = TRUE, which asks the model to access the importance of variables.
+```{r}
+bagging.boston = randomForest(medv ~ ., data = Boston,subset = train, mtry = 13, importance = TRUE)
+bagging.boston
+```
+Predict the data using predict function
+```{r}
+pred.Boston = predict(bagging.boston, newdata = Boston[test,])
+plot(pred.Boston, Boston[test, 'medv'], xlab = "Predicted Values", ylab = "Test Data" )
+abline(0, 1)
+```
+
+We can see from the graph that predictions from bagging are somewhere close to test data of Boston. We can find the mean error to predict the accuracy
+```{r}
+mean((pred.Boston - Boston[test,'medv'])^2)
+```
+
+We can change number of trees grown by random forest (ie B bagged trees). Here, we have set ntree = 25
+```{r}
+bagging.boston = randomForest(medv ~ ., data = Boston,subset = train, mtry = 13, ntree = 25)
+pred.Boston = predict(bagging.boston, newdata = Boston[test,])
+mean((pred.Boston - Boston[test,'medv'])^2)
+```
+
+Random Forest works better than bagging because at each split it chooses m variables, where m<p. Thus, there will be trees that are not correlated with each other as we can observe in Bagging that there will always be one predictor which is strong and get chosen at the root level for every tree. Therefore, most of the bagged trees will be correlated, unlike random forest, and average variance will be more. In case of Random Forest, average variance will be less because no of trees which are correlated will be less.
+Generally, randomForest() takes m = p/3. Here we are taking m = 4
+```{r}
+rf.boston = randomForest(medv ~ ., data = Boston,subset = train, mtry = 4, importance = TRUE)
+pred.Boston = predict(bagging.boston, newdata = Boston[test,])
+mean((pred.Boston - Boston[test,'medv'])^2)
+```
+
+Clearly, random forest works better than Bagging.
+
+```{r}
+importance(rf.boston)
+```
+
+%IncMSE shows decrease in accuraancy if that variable is not included in the model.
+IncNodePurity shows average increase in nodePurity over all trees in random forests when including that variable in split.
+Otherway,
+The former is based upon the mean decrease of accuracy in predictions on the out of bag samples when a given variable is excluded from the model. The latter is a measure
+of the total decrease in node impurity that results from splits over that variable, averaged over all trees 
+In the case of regression trees, the node impurity is measured by the training
+RSS, and for classification trees by the deviance.
+
+```{r}
+varImpPlot(rf.boston)
+```
+
