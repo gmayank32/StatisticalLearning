@@ -1,0 +1,66 @@
+---
+title: "Simple Trees: Regression "
+output: html_notebook
+---
+
+##Regression Trees##
+
+```{r}
+library(tree)
+library(MASS)
+
+head(Boston)
+```
+
+
+```{r}
+summary(Boston)
+```
+
+predicting medv values on the basis of other columns.
+```{r}
+set.seed(1)
+train <- sample(1:nrow(Boston), nrow(Boston)/2)
+tree.fit <- tree(medv ~ . , Boston, subset = train)
+summary(tree.fit)
+```
+
+Here deviance is sum of squared residuals. Plotting the tree.
+```{r}
+plot(tree.fit)
+text(tree.fit, pretty = 0)
+```
+The branch on left side correponds to label on top of the horizontal line of two branches. 
+For each terminal node, tree computes mean of all the observations which are in that node.
+Now using cross validation to select a tree with right number of terminal nodes.
+```{r}
+cv.tree.Boston <- cv.tree(tree.fit)
+plot(cv.tree.Boston, type="b")
+```
+
+```{r}
+cv.tree.Boston
+```
+
+In this case, the most complex tree is selected by CV. To prune the tree, we do as follows.(We are going to use best=5 although best is 8 here with minimum deviance(CV).)
+```{r}
+prune.boston <- prune.tree(tree.fit, best = 5)
+plot(prune.boston)
+text(prune.boston)
+```
+Making predictions with unpruned tree.
+```{r}
+tree.predict <- predict(tree.fit, Boston[-train,])
+medv.test <- Boston[-train,'medv']
+mean((tree.predict-medv.test)^2)
+```
+Test MSE is 25. Square root of this is 5 which means that predictions made by this model will be around $5000 of median value.
+
+Making predications with pruned tree.
+```{r}
+tree.predict <- predict(prune.boston, Boston[-train,])
+medv.test <- Boston[-train,'medv']
+mean((tree.predict-medv.test)^2)
+```
+Pruned tree with 5 terminal node has low accuracy then the most complex tree with 8 nodes.
+

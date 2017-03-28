@@ -1,0 +1,107 @@
+---
+title: "Simple Trees: Classification"
+output: html_notebook
+---
+
+##Classification Trees##
+
+```{r}
+library(tree)
+```
+
+Using Carseats in ISLR library:
+```{r}
+library(ISLR)
+head(Carseats)
+```
+
+```{r}
+summary(Carseats)
+```
+
+We will use sales as response variable but we have to convert it to factor/categorical variable using if else.
+```{r}
+High <- ifelse(Carseats$Sales>8, 'YES', 'NO')
+Carseats <- data.frame(Carseats, High)
+head(Carseats)
+```
+
+The syntax of tree is similar to lm.
+```{r}
+tree.fit <- tree(High~.-Sales, Carseats)
+summary(tree.fit)
+```
+
+Here, training error is 9%. The residual mean deviance is no of observations - no of terminal nodes.
+Trees can be graphically displayed using plot.
+```{r}
+plot(tree.fit)
+text(tree.fit, pretty = 0)
+```
+Using the name of fit tree, we can get output corresponding to each branch of the tree. 
+```{r}
+tree.fit
+```
+
+To evaluate the performance of the tree, we must compute and judge on the basis of test error instead of training error. Therefore, we divide the data into training and test data. We will use predict to make predictions on test with type ="class" for classification.
+```{r}
+set.seed(2)
+train <- sample(1:nrow(Carseats), 200)
+Carseats.test <- Carseats[-train,]
+High.test <- High[-train]
+tree.fit <- tree(High~.-Sales, Carseats, subset = train)
+summary(tree.fit)
+```
+
+```{r}
+
+tree.predict <- predict(tree.fit, Carseats.test, type = "class")
+table.pred <- table(tree.predict, High.test)
+table.pred
+```
+
+```{r}
+acc <- table.pred['NO','NO']+table.pred['YES','YES']
+acc/200
+```
+
+It gives accuracy of 71.5%.
+Now we will see if cross validation finds out a tree with a complexity that gives improved results as compared to results above. We will use classification error as a guidance to select the best tree by using FUN = prune.misclass.
+
+```{r}
+set.seed(3)
+cv.tree.carseats <- cv.tree(tree.fit, FUN = prune.misclass)
+names(cv.tree.carseats)
+```
+
+cv.tree gives the size of each tree and corresponding error rate and corresponding k(cost complexity parameter used) which is alpha.
+```{r}
+cv.tree.carseats
+```
+Dev corresponds to cross validation error in this case. It says that a tree with 9 terminal nodes and error of 50 is best tree so predicting test values on this.
+
+We now apply prune.misclass() in order to prune the to obtain nine node tree.
+```{r}
+prune.tree <-prune.misclass(tree.fit, best = 9)
+plot(prune.tree)
+text(prune.tree, pretty=0)
+```
+Making predictions on test data.
+```{r}
+tree.pred <- predict(prune.tree, Carseats.test, type = "class")
+prune.table <- table(tree.pred, High.test)
+```
+
+Accuracy is:
+```{r}
+(prune.table['NO','NO']+prune.table['YES','YES'])/200
+```
+
+If we increase the number of terminal nodes ie value of best. We will get a tree with lower accuracy.
+```{r}
+prune.tree <-prune.misclass(tree.fit, best = 15)
+tree.pred <- predict(prune.tree, Carseats.test, type = "class")
+prune.table <- table(tree.pred, High.test)
+(prune.table['NO','NO']+prune.table['YES','YES'])/200
+```
+
