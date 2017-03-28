@@ -5,7 +5,7 @@ output: html_notebook
 
 **Support Vector Classifier**
 
-svm() from e1071 library is used for support vector machine. For support vector classifier we set kernel="linear". The cost argument is set to a value that determines the width of margin. If cost is assigned to a small value then the margin will be wide and many support vectors will be on the margin or violate the margin. If cost is large then the margin will be narrow and few support vectors will be on the margin or violate the margin.
+svm() from e1071 library is used for support vector machine. For support vector classifier, we set kernel="linear". The cost argument is set to a value that determines the width of margin. If cost is assigned to a small value then the margin will be wide and many support vectors will be on the margin or violate the margin. If cost is large then the margin will be narrow and few support vectors will be on the margin or violate the margin.
 
 ```{r}
 set.seed(1)
@@ -15,7 +15,7 @@ x[y==1,] = x[y==1,] + 1
 plot(x, col = 3-y)
 ```
 
-Classes(y=1,y=-1) does not seem to be lineary separable.
+Classes(y=1,y=-1) does not seem to be lineary separable. 
 In order to perform SVM, we have to convert response variable to factor variable. Then, concatenate x and y as a data frame
 
 ```{r}
@@ -39,6 +39,7 @@ We can observe that:
 3) As we used kernel = "linear", the two regions is separated by linear boundary.
 4) x are support vectors.
 5) o are observations which are not support vectors.
+6) One observation is misclassified.
 
 We can determine the identities of support vector using:
 ```{r}
