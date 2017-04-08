@@ -1,5 +1,5 @@
 ---
-title: "R Notebook: Support Vector Machine(Non Linear Model)"
+title: "R Notebook: Support Vector Machine(Non Linear)"
 output: html_notebook
 ---
 
