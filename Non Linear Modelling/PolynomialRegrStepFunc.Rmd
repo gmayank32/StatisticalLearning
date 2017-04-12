@@ -1,0 +1,169 @@
+---
+title: "Non Linear Modelling"
+output: html_notebook
+---
+
+
+```{r}
+library(ISLR)
+#attach(Wage)
+names(Wage)
+```
+```{r}
+summary(Wage)
+```
+```{r}
+head(Wage)
+```
+ 
+```{r}
+dim(Wage)
+```
+
+## Polynomial Regression and Step Functions
+
+**poly function**
+Poly function generates orthogonal polynomials. If you want to consider poly as black box function then don't be bothered about orthogonal polynomials.
+
+The poly function returns a matrix where each row corresponds to a training point and columns are basis of orthogonal polynomials. Each column is a linear combination of age, age^2, age^3, age^4. 
+
+**Linear combination according to wikipedia :** 
+```
+In mathematics, a linear combination is an expression constructed from a set of terms by multiplying each term by a constant and adding the results (e.g. a linear combination of x and y would be any expression of the form ax + by, where a and b are constants)
+```
+```{r}
+head(poly(Wage$age, 4))
+```
+
+With raw = TRUE, we can obtain age, age^2, age^3, age^4.
+```{r}
+head(poly(Wage$age, 4, raw = T))
+```
+```{r}
+fit = lm(wage~poly(age, 4), data = Wage)
+coef(summary(fit))
+```
+We can use poly with raw = T, the choice of basis functions may effect coeff estimates but overall model remains the same.
+```{r}
+fit2 <- lm(wage ~ poly(age, 4, raw = T), data = Wage)
+coef(summary(fit2))
+```
+The fitted value remains same.
+```{r}
+plot(fitted(fit), fitted(fit2))
+```
+
+
+The formula in R is quite flexible. We can use formula like below
+`
+```{r}
+fit3 <- lm(wage ~ I(age) + I(age ^ 2) + I(age ^ 3) + I(age ^ 4), data = Wage)
+coef(summary(fit3))
+```
+In above formula I() serves as a wrapper to protect power terms as ^ has a special meaning in formula. Any function call like cbind inside formula also serves as a wrapper.
+```{r}
+fit4 <- lm(wage ~ cbind(age, age^2, age^3, age^4))
+coef(summary(fit4))
+```
+
+Creating grid values for age at which we want predictions using predict and specifying we need standard errors as well.
+```{r}
+age.range <- range(age)
+age.grid <- seq(from = age.range[1], to = age.range[2])
+pred <- predict(fit, newdata = list(age = age.grid), se = TRUE)
+se.bands <- cbind(pred$fit + 2*pred$se.fit, pred$fit - 2*pred$se.fit)
+head(se.bands)
+```
+```{r}
+plot(age, wage, xlim = age.range, cex = .5, col = "darkgrey")
+title("Degree 4 Polynomial")
+lines(age.grid,pred$fit, lwd = 2, col = "blue")
+matlines(age.grid, se.bands, lwd = 1, col = "blue", lty = 3)
+```
+mar and oma arguments in par are used tocontrol margins.
+
+poly function without raw = TRUE parameter produces orthogonal set of basis functions. But, it doesn't effect the model obtained in meaningful way.
+```{r}
+pred2 <- predict(fit2, newdata = list(age = age.grid), se = TRUE)
+max(abs(pred$fit - pred2$fit))
+```
+
+### Hypothesis Tests
+
+**ANOVA tests**:
+In order to determine which degree polynomial to use we can use hypothesis test. We can create a hypothesis that M1, a simpler model is sufficient to explain the reationship between predictor and response or more complex model M2 is required using ANOVA, F-test. The predictors in M1 must be subset of M2.
+```{r}
+fit1 <- lm(wage~age)
+fit2 <- lm(wage~poly(age, 2))
+fit3 <- lm(wage~poly(age, 3))
+fit4 <- lm(wage~poly(age, 4))
+fit5 <- lm(wage~poly(age, 5))
+anova(fit1, fit2, fit3, fit4, fit5)
+```
+1) The p-value comparing the linear model 1 to quadratic model 2 is close to zero which means that linear fit is not sufficient.
+
+2) The p-value comparing the quadratic model 2 to cubic model 3 is very low which means quadratic model is not sufficient.
+
+3) The p-value comparing the cubic model to quartic model is 0.05 and comparing model 4 with model 5 the p-value is 0.369 thus degree 5 polynomial is not required.
+
+**Conclusion** : the quartic and cubic polynomial appear to provide reasonable fit.
+
+Instead of using ANOVA we could have used p-values obtained by exploiting the fact that poly function produces orthogonal polynomials. As probability associated with each coefficient is same as anova.
+
+It is because of fact that orthogonal polynomial of degree n is obtained by orthogonal polynomial of degree n-1. 
+```{r}
+coef(summary(fit5))
+```
+```{r}
+summary(fit5)
+```
+
+NOTE : the coefficients and p-value are different when using raw = TRUE. This is because predictors age^2 and age are highly correlated while in orthogonal age^2 only captures the quadratic part that has not been captured by linear term.
+
+## Polynomial Logistic Regression
+```{r}
+fit <- glm(I(wage>250)~poly(age, 4), family = binomial)
+fit
+```
+wage>250 evaluates to TRUEs and FALSEs which glm coerces to 0s and 1s.
+```{r}
+pred <- predict(fit, newdata = list(age = age.grid), se = T)
+```
+
+By default, prediction type for a glm model is type = 'link'. This means we get predictions for the logit which means we fit a model of the form.
+
+```
+                                        log(Pr(Y=1/X)/(1-Pr(Y=1/X))) = XB
+```
+
+In order to obtain confidence intervals for P(Y=1/X) we will use transformations.
+```
+                                        P(Y=1/X) = exp(XB)/(1+exp(XB))
+```
+
+```{r}
+pfit <- exp(pred$fit)/(1+exp(pred$fit))
+se.bands.logit <- cbind(pred$fit + 2*pred$se.fit, pred$fit - 2*pred$se.fit)
+se.bands <- exp(se.bands.logit)/(1+exp(se.bands.logit))
+```
+
+**NOTE: ** We could have directly computed probabilities using type = "response".
+```{r}
+plot(age, I(wage>250), xlim = age.range, ylim = c(0, .2))
+points(jitter(age), I((wage>250)/5), cex = .5, pch = "|", col = 'darkgray')
+title("Degree 4 Polynomial")
+lines(age.grid, pfit, lwd = 2, col = "blue")
+matlines(age.grid, se.bands, lwd = 1, col = "blue", lty = 3)
+```
+Jitter function jitter age values a bit so that observations with same age value do not cover each other up. This is called a _rug plot_. Age values corresponding to wage above 250 are shown as gray marks on top and age values corresponding to wage below 250 are shown as gray marks on bottom.
+
+**Cut function :**
+```{r}
+table(cut(age, 4))
+```
+
+```{r}
+fit <- lm(wage ~ cut(age, 4))
+summary(fit)
+```
+The cut produces chooses 4 cuts as shown by table. We can use our own break points using breaks. lm() function creates dummy variables for use in the regression. The age<33.5 is left out, so the intercept represents the average salary of people below age 33.5 and other coefficients can be treated as average additional salary under those age groups.
