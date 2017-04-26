@@ -1,0 +1,103 @@
+---
+title: "General Additive Models"
+output: html_notebook
+---
+
+
+```{r}
+library(ISLR)
+attach(Wage)
+```
+```{r}
+head(Wage)
+
+```
+```{r}
+summary(Wage)
+dim(Wage)
+```
+
+We will use GAM to predict wage using natural splines functions of Age, year and taking education as a qualitative predictor.
+```{r}
+library(splines)
+gam.ns <- lm(wage~ns(age)+ns(year)+education, data = Wage)
+summary(gam.ns)
+```
+To fit general sorts of GAMs, using smoothing splines or other components that can not be expressed in terms of basis functions and then fit using least squares regression, we can use gam library. We fit smoothing spline to age and year with degrees of freedom of 4 and 5 keeping education as it is. For smoothing spline we can use s(). 
+```{r}
+library(gam)
+gam1 <- gam(wage ~ s(age, 4) + s(year, 5) + education)
+summary(gam1)
+```
+Plot the above fit
+```{r}
+plot(gam1, se = T, col = "blue")
+```
+The plot function recognizes gam4 as an object of gam and call appropriate plot function plot.gam(). Though, gam3 is an object of lm we use plot.gam to plot it.
+```{r}
+plot.gam(gam.ns, se = T, col = 'blue')
+```
+
+Here, the functions of year and age are looking linear. 
+
+## ANOVA test. We can use anova test to find out which model is most significant.
+1) A model with no year
+2) A GAM model that uses spline function of year
+3) A GAM model that uses linear function of year 
+
+Hypothesis
+Mi is suffiecient and we do not need Mi+1 model
+```{r}
+gam2 <- gam(wage ~ year + s(age, 5) + education)
+gam3 <- gam(wage ~ s(age, 5) + education)
+
+anova(gam3, gam2, gam1, test = "F")
+```
+Therefore, according to F test, model 2 is better than model 3 with no year(Pr = 0.00014 is supportive of that). But there is no evidence that non linear function of year is better than linear function of year(Pr = 0.57). Thus Model 2 is preferred.
+
+**Otherway**
+```{r}
+summary(gam2)
+```
+**Anova for Nonparametric Effects**
+The p-values for year and age correspond to null hypothesis of a linear relationships vs non linear relationship. The large p-value for year concludes that we dont need non linear function for this term. However, small value of p for age indicates that a non linear function is required. 
+
+**Predictions**
+We can make predictions with model 2.
+```{r}
+pred <- predict(gam2, newdata = Wage)
+mean((pred - Wage$wage)^2)
+```
+
+##local regression
+We can use local regression functions as basis functions in GAM. with **lo()** function.
+```{r}
+gam4 <- gam(wage~lo(age)+s(year,df=4)+education, data = Wage)
+```
+Above function is not working so let's keep it there and solve it in future.
+```{r}
+gam.lo <- gam(wage~lo(year,age,span=0.5)+education)
+```
+Here. lo(age,year) is an interaction term fit by a local regression surface. We can show the two dimensional surface using akima package.
+```{r}
+library(akima)
+plot(gam.lo)
+```
+
+## Logistic Regression:
+
+For logistic regression we will use I
+```{r}
+gam.lr <- gam(I(wage>250)~year+s(age, df=5)+education, family = binomial, data = Wage)
+plot(gam.lr, col = 'green', se = T)
+```
+We can easily see that people who earn more than 250 are not in <HS Grad.
+```{r}
+table(education, I(wage>250))
+```
+We will fit logistic regression GAM using all but this category.
+```{r}
+gam.lr <- gam(I(wage>250)~year+s(age, df=5)+education, family = binomial, data = Wage, subset = (education!='1. < HS Grad'))
+plot(gam.lr, se = T, col = 'red')
+```
+
