@@ -4,11 +4,9 @@ output: html_notebook
 ---
 
 
+
 ```{r}
-library(ISLR)
-attach(Wage)
-```
-```{r}
+library(Wage)
 head(Wage)
 
 ```
