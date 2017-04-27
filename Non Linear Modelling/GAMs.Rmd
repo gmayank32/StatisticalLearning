@@ -57,7 +57,7 @@ Therefore, according to F test, model 2 is better than model 3 with no year(Pr =
 
 **Otherway**
 ```{r}
-summary(gam2)
+summary(gam1)
 ```
 **Anova for Nonparametric Effects**
 The p-values for year and age correspond to null hypothesis of a linear relationships vs non linear relationship. The large p-value for year concludes that we dont need non linear function for this term. However, small value of p for age indicates that a non linear function is required. 
@@ -72,11 +72,15 @@ mean((pred - Wage$wage)^2)
 ##local regression
 We can use local regression functions as basis functions in GAM. with **lo()** function.
 ```{r}
-gam4 <- gam(wage~lo(age)+s(year,df=4)+education, data = Wage)
+# I am using GAM 1.14 version
+gam4 <- gam(wage~lo(age, span = 0.7)+s(year,df=4)+education, data = Wage)
+summary(gam4)
 ```
-Above function is not working so let's keep it there and solve it in future.
+**Anova for Nonprametric Effects**
+Pr value for s(year, df = 4) show that we dont need non linear function for this term.
 ```{r}
 gam.lo <- gam(wage~lo(year,age,span=0.5)+education)
+summary(gam.lo)
 ```
 Here. lo(age,year) is an interaction term fit by a local regression surface. We can show the two dimensional surface using akima package.
 ```{r}
